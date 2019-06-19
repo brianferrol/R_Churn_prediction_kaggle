@@ -43,7 +43,8 @@ packages <- c("tidyverse",
               "rpart.plot",
               "xgboost",
               "ROCR",
-              "pROC"
+              "pROC",
+              "h2o"
 )
 
 prepare_packages(packages)
@@ -61,6 +62,75 @@ glimpse(dataset)
 
 ```
 
+Están todos los factor booleanos en strings pero, el SeniorCitizen no. Cambiémoslo a YES/NO:
+```{r}
+dataset$SeniorCitizen <- as.factor(ifelse(dataset$SeniorCitizen==1, 'YES', 'NO'))
+```
+
+## Probemos un AutoML de H20 sin ninguna modificación
+
+### Primero partimos los datos en split y test
+```{r}
+library(h2o)
+h2o.init()
+
+#Split data into Train/Validation/Test Sets
+
+#split_h2o <- h2o.splitFrame(dataset.hex, c(0.6, 0.2), seed = 1234 )
+#train_conv_h2o <- h2o.assign(split_h2o[[1]], "train" ) # 60%
+#valid_conv_h2o <- h2o.assign(split_h2o[[2]], "valid" ) # 20%
+#test_conv_h2o  <- h2o.assign(split_h2o[[3]], "test" )  # 20%
+
+set.seed(37)
+selected <- sample(1:nrow(dataset), 0.2*nrow(dataset))
+train <- dataset[-selected,]
+test <- dataset[selected,]
+#Model
+# Set names for h2o
+
+y <- "Churn"
+x <- setdiff(names(train), y)
+```
+
+```{r}
+write.csv(train, file = "train.csv")
+write.csv(test, file = "test.csv")
+
+train2 = h2o.importFile("./train.csv")
+test2 = h2o.importFile("./test.csv")
+
+
+
+aml <- h2o.automl(x = x,
+                  y = y,
+                  training_frame = train2,
+                  validation_frame = test2,
+                  max_runtime_secs = 60,
+                  exclude_algos = c("DeepLearning", "GLM", "DRF", "StackedEnsemble"))
+```
+
+Veamos cuál fue mejor:
+```{r}
+
+# Extract leader model
+automl_leader <- aml@leader
+automl_leader
+```
+
+```{r}
+aml@leaderboard
+```
+
+```{r}
+h2o.confusionMatrix(automl_leader)
+```
+
+Vale, vemos que el mejor modelo, nos dió una precisión del 84%. ¿Qué variables son las más importantes para que una persona haga churn o no?
+
+```{r}
+h2o.varimp_plot(automl_leader)
+
+```
 
 
 
