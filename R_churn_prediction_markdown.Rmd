@@ -9,22 +9,59 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Importación de datos y primeras observaciones
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#### Funciones auxiliares para cargar paquetes y lista de paquetes
 
-```{r cars}
-summary(cars)
+```{r}
+prepare_packages <- function(packages){
+  # Chequeamos que paquetes no estan instalados:
+  non_intalled <- packages[!(packages %in% installed.packages()[, "Package"])]
+  # En caso de existir alguno aún no instalado, lo instalamos:
+  if (length(non_intalled)) 
+    install.packages(non_intalled, dependencies = TRUE)
+  # Cargamos toda la lista de paquetes:
+  sapply(packages, require, character.only = TRUE)
+}
+
+
+
+packages <- c("tidyverse",
+              "MASS",
+              "car",
+              "binr",
+              "e1071",
+              "caret",
+              "cowplot",
+              "caTools",
+              "pROC",
+              "ggcorrplot",
+              "data.table",
+              "Information",
+              "rpart",
+              "rpart.plot",
+              "xgboost",
+              "ROCR",
+              "pROC"
+)
+
+prepare_packages(packages)
+
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Importamos el csv que fue previamente guardado en un `Azure blob storage`:
+```{r}
+dataset <- read.csv("https://bferrolfilesstorage.blob.core.windows.net/icemd/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Veamos qué contiene el dataset:
+```{r}
+glimpse(dataset)
+
+```
+
+
+
+
+
