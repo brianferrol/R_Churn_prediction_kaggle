@@ -1,5 +1,5 @@
 ---
-title: "R_Churn_Telco_Kaggle"
+title: "R_Churn_dataset_Kaggle"
 author: "Bferrol"
 date: "18/6/2019"
 output: html_document
@@ -53,7 +53,7 @@ prepare_packages(packages)
 
 Importamos el csv que fue previamente guardado en un `Azure blob storage`:
 ```{r}
-dataset <- read.csv("https://bferrolfilesstorage.blob.core.windows.net/icemd/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+dataset <- read.csv("https://bferrolfilesstorage.blob.core.windows.net/icemd/WA_Fn-UseC_-dataset-Customer-Churn.csv")
 ```
 
 Veamos qué contiene el dataset:
@@ -121,6 +121,7 @@ automl_leader
 aml@leaderboard
 ```
 
+
 ```{r}
 h2o.confusionMatrix(automl_leader)
 ```
@@ -131,6 +132,82 @@ Vale, vemos que el mejor modelo, nos dió una precisión del 84%. ¿Qué variabl
 h2o.varimp_plot(automl_leader)
 
 ```
+
+Las variables más importantes para predecir si una persona abandona o no, son:
+* Contract: Duración de contrato.
+* Tenure: Meses en la compañía (permanencia).
+* Total charges: Cargos totales acumulados.
+
+## EDA: Análisis exploratorio.
+
+Para empezar, veamos qué porcentaje de la muestra tiene churn:
+```{r}
+brian_palette <- c("#6F78BD", "#EE8D47")
+
+options(repr.plot.width = 6, repr.plot.height = 4)
+dataset  %>% 
+group_by(Churn) %>% 
+summarise(Count = n())%>% 
+mutate(percent = prop.table(Count)*100)%>%
+ggplot(aes(reorder(Churn, -percent), percent), fill = Churn)+
+geom_col(fill = brian_palette)+
+geom_text(aes(label = sprintf("%.2f%%", percent)), hjust = 0.01,vjust = -0.5, size =3)+ 
+theme_bw()+  
+xlab("Churn") + 
+ylab("Percent")+
+ggtitle("Churn Percent")
+```
+
+```{r}
+options(repr.plot.width = 16, repr.plot.height = 50)
+
+plot_grid(ggplot(dataset, aes(x=gender,fill=Churn))+ geom_bar()
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=SeniorCitizen,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=Partner,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=Dependents,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=PhoneService,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=MultipleLines,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=InternetService,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=OnlineSecurity,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=OnlineBackup,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=DeviceProtection,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=StreamingMovies,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=StreamingTV,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=Contract,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=PaperlessBilling,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette),
+          ggplot(dataset, aes(x=PaymentMethod,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette)
+          
+          +theme_bw()+scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+                       ,
+          align = "h")
+```
+
+Podemos ver, por ejemplo:
+* Las personas mayores son más propensas a abandonar la compañía.
+* Las personas con dependientes, son menos propensas a abandonar la compañía.
+* Las personas con múltiples líneas, tienen una ligera mayor proporción de abandonar.
+
+
+
+
+
+
+
 
 
 
