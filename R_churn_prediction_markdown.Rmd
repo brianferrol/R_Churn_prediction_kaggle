@@ -53,7 +53,7 @@ prepare_packages(packages)
 
 Importamos el csv que fue previamente guardado en un `Azure blob storage`:
 ```{r}
-dataset <- read.csv("https://bferrolfilesstorage.blob.core.windows.net/icemd/WA_Fn-UseC_-dataset-Customer-Churn.csv")
+dataset <- read.csv("https://bferrolfilesstorage.blob.core.windows.net/icemd/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 ```
 
 Veamos qué contiene el dataset:
@@ -159,7 +159,7 @@ ggtitle("Churn Percent")
 ```
 
 ```{r}
-options(repr.plot.width = 16, repr.plot.height = 50)
+options(repr.plot.width = 16, repr.plot.height = 70)
 
 plot_grid(ggplot(dataset, aes(x=gender,fill=Churn))+ geom_bar()
                       +scale_fill_manual(values = brian_palette),
@@ -194,7 +194,7 @@ plot_grid(ggplot(dataset, aes(x=gender,fill=Churn))+ geom_bar()
           
           +theme_bw()+scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
                        ,
-          align = "h")
+          align = "h", ncol=3)
 ```
 
 Podemos ver, por ejemplo:
