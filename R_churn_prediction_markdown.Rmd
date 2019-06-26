@@ -138,6 +138,8 @@ Las variables más importantes para predecir si una persona abandona o no, son:
 * Tenure: Meses en la compañía (permanencia).
 * Total charges: Cargos totales acumulados.
 
+
+
 ## EDA: Análisis exploratorio.
 
 Para empezar, veamos qué porcentaje de la muestra tiene churn:
@@ -192,9 +194,8 @@ plot_grid(ggplot(dataset, aes(x=gender,fill=Churn))+ geom_bar()
           ggplot(dataset, aes(x=PaymentMethod,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette)
           
-          +theme_bw()+scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
-                       ,
-          align = "h", ncol=3)
+          +theme_bw()+scale_x_discrete(labels = function(x) str_wrap(x, width = 1)),
+          align = "v", ncol=3)
 ```
 
 Podemos ver, por ejemplo:
@@ -203,6 +204,136 @@ Podemos ver, por ejemplo:
 * Las personas con múltiples líneas, tienen una ligera mayor proporción de abandonar.
 
 
+```{r}
+dataset %>%
+  ggplot(aes(x=TotalCharges,fill=Churn))+   geom_density(alpha=0.8)+scale_fill_manual(values=brian_palette)+labs(title='Distribución de TotalCharges por churn' )
+```
+
+Podemos ver que a menores cargos acumulados, mayor proporción de abandonadores, y a medida que este valor crece, bajan los abandonadores. Se podría concluír que los clientes más fieles son los que están hace más años con la compañía.
+
+Comprobémoslo:
+
+```{r}
+dataset %>%
+  ggplot(aes(x=tenure,fill=Churn))+ geom_density(alpha=0.8)+scale_fill_manual(values=brian_palette)+labs(title='Distribución de TotalCharges por churn' )
+```
+
+Efectivamente, los clientes nuevos tienden a abandonar con más frecuencia que los que ya llevan un tiempo relativo en la empresa.
+
+Hagamos un `boxplot` para ver las distribuciones de las variables continuas:
+
+```{r}
+library(GGally)
+
+# Identificamos las variables continuas
+class_vars <- sapply(dataset, class)
+num_vars <- dataset[class_vars=="numeric"]
+int_vars_names <- names(dataset)[class_vars=="integer"]
+
+dataset[int_vars_names,] <- sapply(dataset[int_vars_names,], as.numeric)
+
+num_vars <- dataset[class_vars=="numeric" | class_vars=="integer"]
+
+ggpairs(num_vars, 
+        title="Distribución de variables continuas",
+        colours=brian_palette)
+
+```
+
+Podemos ver que existe cierta relación directa entre los cargos totales y el precio mensual.
+
+```{r}
+correlations <- cor(num_vars, use = "complete.obs")
+correlations
+ggcorrplot(correlations,
+           type = "lower",
+           title = "Correlación de variables numéricas",
+           lab = TRUE,
+           lab_size = 3,
+           colors = c("white", "orange", "brown"))
+
+```
+
+
+```{r}
+class_vars
+```
+
+
+
+## Preparación de datos
+
+Veamos cuántos datos nulos tenemos:
+
+```{r}
+missing_data <- dataset %>% summarise_all(funs(sum(is.na(.))))
+missing_data
+```
+
+¿cuáles son estos 11 casos que tienen `TotalCharges = NA`?
+```{r}
+nans = dataset[is.na(dataset$TotalCharges),]
+nans
+```
+
+Suena lógico, tienen `TotalCharges` nulo, porque su `tenure` es 0, quiere decir que todavía no pagaron su primera cuota.
+
+Esto lleva a preguntarme, ¿merece la pena tener estos casos para hacer una predicción? ¿Tienen información histórica suficiente como para aportar a nuestro modelo o más bien son outliers? ¿los rellenamos con 0 o los quitamos?
+
+Veamos un boxplot de la columna `TotalCharges`:
+
+```{r}
+p <- ggplot(dataset, aes(x=Churn, y=tenure)) + 
+  geom_boxplot()
+p
+```
+
+Si bien el rango intercuartil de `tenure` para los abandonadores es más bajo, se decide quitar estos 11 casos, dado que no merecería la pena meter en el modelo a clientes que todavía no poseen información mínima histórica con la compañía.
+
+```{r}
+clean_dataset = dataset[!(is.na(dataset$TotalCharges)),]
+clean_dataset
+```
+
+### Information value:
+
+
+```{r}
+#dataset$Churn <- as.numeric(ifelse(dataset$Churn=="YES", 1, 0))
+
+clean_dataset$Churn <- as.numeric(ifelse(clean_dataset$Churn == "Yes", 1, 0))
+
+iv_ds <- create_infotables(data=clean_dataset,
+                           y="Churn")
+
+iv_summary <- iv_ds$Summary
+iv_summary <- iv_summary[order(iv_summary$IV), ]
+iv_summary$Variable <- factor(iv_summary$Variable, levels=iv_summary$Variable)
+
+ggplot(iv_summary, aes(x=Variable, y=IV, fill = IV))+
+  coord_flip() +
+  scale_fill_gradient(low = "grey", high = "green") +
+  geom_bar(stat = "identity")
+
+```
+  
+
+WOE segun el tipo de contrato:
+
+```{r}
+ggplot(iv_ds$Tables$Contract, aes(x=Contract, y=WOE, fill = WOE))+
+  scale_fill_gradient(low = "red", high = "green") +
+  geom_bar(stat = "identity")
+```
+
+WOE segun la agrupacion de edad:
+
+```{r}
+age_ds <- iv_ds$Tables$age_groups
+age_ds$age_groups <- factor(age_ds$age_groups , levels=levels(dataset$age_groups))
+ggplot(age_ds, aes(x=age_groups, y=WOE, fill = WOE))+
+  scale_fill_gradient(low = "red", high = "green") +
+  geom_bar(stat = "identity")
 
 
 
