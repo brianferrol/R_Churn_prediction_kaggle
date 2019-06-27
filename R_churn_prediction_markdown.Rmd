@@ -44,7 +44,8 @@ packages <- c("tidyverse",
               "xgboost",
               "ROCR",
               "pROC",
-              "h2o"
+              "h2o",
+              "dummies"
 )
 
 prepare_packages(packages)
@@ -318,21 +319,7 @@ ggplot(iv_summary, aes(x=Variable, y=IV, fill = IV))+
 ```
   
 
-WOE segun el tipo de contrato:
-
-#max(telco$tenure)
-#min(telco$tenure)
-telco <- mutate(telco, tenure_bin = tenure)
-
-telco$tenure_bin[telco$tenure_bin >=0 & telco$tenure_bin <= 12] <- '0-1 year'
-telco$tenure_bin[telco$tenure_bin > 12 & telco$tenure_bin <= 24] <- '1-2 years'
-telco$tenure_bin[telco$tenure_bin > 24 & telco$tenure_bin <= 36] <- '2-3 years'
-telco$tenure_bin[telco$tenure_bin > 36 & telco$tenure_bin <= 48] <- '3-4 years'
-telco$tenure_bin[telco$tenure_bin > 48 & telco$tenure_bin <= 60] <- '4-5 years'
-telco$tenure_bin[telco$tenure_bin > 60 & telco$tenure_bin <= 72] <- '5-6 years'
-
-telco$tenure_bin <- as.factor(telco$tenure_bin)
-
+WOE segun la variable más importante `Contract`:
 
 
 ```{r}
@@ -341,10 +328,78 @@ ggplot(iv_ds$Tables$Contract, aes(x=Contract, y=WOE, fill = WOE))+
   geom_bar(stat = "identity")
 ```
 
-WOE segun la agrupacion de tenure:
+¿Y según `tenure`?:
+
+
+```{r}
+ggplot(iv_ds$Tables$tenure, aes(x=tenure, y=WOE, fill = WOE))+
+  scale_fill_gradient(low = "red", high = "green") +
+  geom_bar(stat = "identity")
+```
+
+
+## Preprocessing:
+
+```{r}
+df <- clean_dataset[,names(clean_dataset) != "customerID"]
+
+class_vars <- sapply(df, class)
+cat_vars <- df[,class_vars=="factor"]
+
+
+```
+
+
+```{r}
+library("fastDummies")
+
+Dummies <- dummy_cols(df, select_columns = names(cat_vars), remove_first_dummy = TRUE)
+
+df <- Dummies[,!names(Dummies) %in% names(cat_vars)]
+```
+
+
+## Modelos de clasificación:
+
+Primero hacemos un split de las variables:
+
+```{r}
+
+seed <- 12345 
+  
+set.seed(seed)
+
+trainIndex <- createDataPartition(df$Churn, p = .75, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex)
+```
+```{r}
+Train <- df[ trainIndex,]
+Test  <- df[-trainIndex,]
+
+```
+
+```{r}
+library("caret")
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10)
 
 
 
+library("gbm")
+gbmFit1 <- train(Churn ~ ., data = Train, 
+                 method = "gbm", 
+                 trControl = fitControl,
+                 ## This last option is actually one
+                 ## for gbm() that passes through
+                 verbose = FALSE)
+gbmFit1
+
+```
 
 
 
