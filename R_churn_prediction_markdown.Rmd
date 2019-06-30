@@ -164,6 +164,7 @@ aml@leaderboard
 h2o.confusionMatrix(automl_leader)
 ```
 
+
 Vale, vemos que el mejor modelo, nos dió una precisión del 84%. ¿Qué variables son las más importantes para que una persona haga churn o no?
 
 ```{r}
@@ -680,7 +681,223 @@ Por otro lado, hemos visto en el H2o que el modelo que mejor performaba era el *
 
 ### GBM
 
+```{r}
+gbmGrid <-  grid <- expand.grid( .n.trees=seq(10,50,10), 
+                                 .interaction.depth=seq(1,4,1), 
+                                 .shrinkage=c(0.01,0.001), 
+                                 .n.minobsinnode=seq(5,20,5)) 
+
+fitControl <- trainControl(method = "repeatedcv",
+                       repeats = 5,
+                       preProcOptions = list(thresh = 0.95),
+                       ## Estimate class probabilities
+                       classProbs = TRUE,
+                       ## Evaluate performance using
+                       ## the following function
+                       summaryFunction = twoClassSummary)
+
+# Method + Date + distribution
+set.seed(12345)
+
+Train3 <- Train
+
+Train3 %>% 
+  rename(
+    PaymentMethod_Bank_transfer = "PaymentMethod_Bank transfer (automatic)",
+    PaymentMethod_CreditCard = "PaymentMethod_Credit card (automatic)",
+    InternetService_FiberOptic = "InternetService_Fiber optic",
+    Contract_OneYear = "Contract_One year",
+    Contract_TwoYear = "Contract_Two year",
+    PaymentMethod_MailedCheck = "PaymentMethod_Mailed check",
+    tenure_group_more_60Month = "tenure_group_> 60 Month",
+    tenure_group_24_48Month = "tenure_group_24-48 Month",
+    tenure_group_12_24Month = "tenure_group_12-24 Month",
+    tenure_group_48_60Month = "tenure_group_48-60 Month"
+
+    )
+
+feature.names=names(Train3)
+
+for (f in feature.names) {
+  if (class(Train3[[f]])=="factor") {
+    levels <- unique(c(Train3[[f]]))
+    Train3[[f]] <- factor(Train3[[f]],
+                   labels=make.names(levels))
+  }
+}
+
+GBMada <- train(Churn~.,
+            Train3, 
+            distribution = "adaboost",
+            method = "gbm",
+            trControl = fitControl,
+            verbose = TRUE,
+            tuneGrid = gbmGrid,
+            ## Specify which metric to optimize
+            metric = "Accuracy")
+
+GBMada
+```
+
+```{r}
+whichTwoPct <- tolerance(GBMada$results, metric = "ROC", tol = 2, maximize = TRUE)
+cat("best model within 2 pct of best:\n")
+GBMada$results[whichTwoPct,1:6]
+```
+
+Es bastante mejor el resultado, intentemos tirar directamente ese modelo:
+```{r}
+GBMada$bestTune
+```
+```{r}
+gbmGrid_best <-  grid <- expand.grid( 
+                                 .n.trees=50, 
+                                 .interaction.depth=4, 
+                                 .shrinkage=0.01, 
+                                 .n.minobsinnode=20) 
+
+fitControl <- trainControl(method = "repeatedcv",
+                       repeats = 5,
+                       preProcOptions = list(thresh = 0.95),
+                       ## Estimate class probabilities
+                       classProbs = TRUE,
+                       ## Evaluate performance using
+                       ## the following function
+                       summaryFunction = twoClassSummary)
+
+GBMada_best <- train(Churn~.,
+            Train3, 
+            distribution = "adaboost",
+            method = "gbm",
+            trControl = fitControl,
+            verbose = TRUE,
+            tuneGrid = gbmGrid_best,
+            ## Specify which metric to optimize
+            metric = "ROC",)
+
+GBMada_best
+```
 
 
 
+```{r}
+Test3 <- Test
+
+Test3 %>% 
+  rename(
+    PaymentMethod_Bank_transfer = "PaymentMethod_Bank transfer (automatic)",
+    PaymentMethod_CreditCard = "PaymentMethod_Credit card (automatic)",
+    InternetService_FiberOptic = "InternetService_Fiber optic",
+    Contract_OneYear = "Contract_One year",
+    Contract_TwoYear = "Contract_Two year",
+    PaymentMethod_MailedCheck = "PaymentMethod_Mailed check",
+    tenure_group_more_60Month = "tenure_group_> 60 Month",
+    tenure_group_24_48Month = "tenure_group_24-48 Month",
+    tenure_group_12_24Month = "tenure_group_12-24 Month",
+    tenure_group_48_60Month = "tenure_group_48-60 Month"
+
+    )
+
+
+feature.names=names(Test3)
+
+for (f in feature.names) {
+  if (class(Test3[[f]])=="factor") {
+    levels <- unique(c(Test3[[f]]))
+    Test3[[f]] <- factor(Test3[[f]],
+                   labels=make.names(levels))
+  }
+}
+
+mPred = predict(GBMada_best, Test3, na.action = na.pass)
+confusionMatrix(mPred, Test3$Churn)
+
+```
+
+Sólo encuentra un valor en los Test, por lo que el modelo no nos sirve.
+
+
+
+### Árbol de decisión
+
+```{r}
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+set.seed(12345)
+
+colnames(Train) <- make.names(colnames(Train))
+
+dtree_fit <- train(Churn~.,
+                   Train,
+                   method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10,
+                   )
+
+dtree_fit
+```
+
+```{r}
+
+colnames(Test) <- make.names(colnames(Test))
+
+predict_tree <-  predict(dtree_fit, Test)
+confusionMatrix(predict_tree, Test$Churn, positive = "1")
+```
+
+Nuevamente tenemos un problema con los positivos que no detecta, ¿y si hacemos un resampling?
+
+### Tuning GLM
+```{r}
+modelLookup("bayesglm")
+```
+
+
+
+
+```{r}
+
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10,
+                           sampling = "smote"
+                           )
+
+set.seed(12345)
+
+lreg2 <-train(Churn ~ .,
+              data = Train2,
+              method="glm",
+              family=binomial(),
+              trControl=fitControl,
+              preProc = c("center", "scale"))
+
+lreg2
+```
+
+```{r}
+
+predict_glm <-  predict(lreg2, Test2)
+confusionMatrix(predict_glm, Test2$Churn, positive = "1")
+```
+```{r}
+varImp(lreg2, scale = FALSE)
+```
+
+Esta sería nuestra mejor aproximación, donde vemos reducida la cantidad de falsos negativos.
+
+## Conclusiones:
+
+Al tratarse de una muestra no balanceada, se tuvo que recurrir a técnicas de balanceo como el "SMOTE".
+
+Las variables que más peso tienen en la predicción analizada son:
+* Contrato (2 años y 1 año).
+* Servicio de internet (fibra).
+* Tenure 48-60 meses (mucho tiempo en compañía).
+
+
+Se recomienda a la empresa cerrar contratos largos, ofrecer fibra óptica en lugar de adsl y hacer una acción especial regalando fibra y generando contratos a largo plazo.
 
