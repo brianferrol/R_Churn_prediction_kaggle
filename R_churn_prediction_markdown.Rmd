@@ -540,8 +540,23 @@ No resultó siendo un modelo muy bueno, ya que podemos ver que existe una gran c
 library(fastAdaboost)
 
 
+ada = adaboost(Churn~.,
+               Train2, 
+               nIter = 40)
+
+ada
+summary(ada)
+```
+
+Veamos los resultados:
+```{r}
+model_ada_predict <- predict(ada,newdata =  Test2)
+
+confusionMatrix(model_ada_predict$class, Test2$Churn)
+
 
 ```
 
+Con este segundo modelo, obtenemos un peor resultado, en cuanto a accuracy y falsos negativos.
 
 
