@@ -484,7 +484,8 @@ fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
                            number = 10,
                            ## repeated ten times
-                           repeats = 10)
+                           repeats = 10,
+                           )
 
 
 ## Logistic regression
@@ -541,8 +542,9 @@ library(fastAdaboost)
 
 
 ada = adaboost(Churn~.,
-               Train2, 
-               nIter = 40)
+               Train, 
+               nIter = 40
+               )
 
 ada
 summary(ada)
@@ -550,13 +552,135 @@ summary(ada)
 
 Veamos los resultados:
 ```{r}
-model_ada_predict <- predict(ada,newdata =  Test2)
+model_ada_predict <- predict(ada,newdata =  Test)
 
-confusionMatrix(model_ada_predict$class, Test2$Churn)
+confusionMatrix(model_ada_predict$class, Test$Churn)
 
 
 ```
 
 Con este segundo modelo, obtenemos un peor resultado, en cuanto a accuracy y falsos negativos.
+
+
+### Random Forest
+
+No soportado por mi portátil.
+
+### XGBoost
+
+```{r}
+grid_default <- expand.grid(
+  nrounds = 100,
+  max_depth = 6,
+  eta = 0.3,
+  gamma = 0,
+  colsample_bytree = 1,
+  min_child_weight = 1,
+  subsample = 1
+)
+
+
+train_control <- caret::trainControl(
+  method = "none",
+  verboseIter = FALSE, # no training log
+  allowParallel = TRUE # FALSE for reproducible results 
+)
+
+xgb_base <- caret::train(
+  Churn~.,
+  Train, 
+  trControl = train_control,
+  tuneGrid = grid_default,
+  method = "xgbTree",
+  verbose = TRUE
+)
+
+xgb_base
+
+
+```
+
+Vamos a hacer un gridsearch para los hiperparámetros:
+
+```{r}
+nrounds <- 500
+
+tune_grid <- expand.grid(
+  nrounds = seq(from = 200, to = nrounds, by = 50),
+  eta = c(0.025, 0.05, 0.1, 0.3),
+  max_depth = c(2, 3, 4, 5, 6),
+  gamma = 0,
+  colsample_bytree = 1,
+  min_child_weight = 1,
+  subsample = 1
+)
+
+tune_control <- caret::trainControl(
+  method = "cv", # cross-validation
+  number = 3, # with n folds 
+  #index = createFolds(tr_treated$Id_clean), # fix the folds
+  verboseIter = FALSE, # no training log
+  allowParallel = TRUE # FALSE for reproducible results 
+)
+
+xgb_tune <- caret::train(
+  Churn~.,
+  Train, 
+  trControl = tune_control,
+  tuneGrid = tune_grid,
+  method = "xgbTree",
+  verbose = TRUE
+)
+
+xgb_tune$bestTune
+```
+
+Veamos los resultados del grid resultado aplicando también un resampling de tipo SMOTE:
+```{r}
+grid_new <- expand.grid(
+  nrounds = 250,
+  max_depth = 4,
+  eta = 0.025,
+  gamma = 0,
+  colsample_bytree = 1,
+  min_child_weight = 1,
+  subsample = 1
+)
+
+
+train_control <- caret::trainControl(
+  method = "none",
+  verboseIter = FALSE, # no training log
+  allowParallel = TRUE, # FALSE for reproducible results 
+  sampling = "smote"
+  )
+
+xgb_tuned <- caret::train(
+  Churn~.,
+  Train, 
+  trControl = train_control,
+  tuneGrid = grid_new,
+  method = "xgbTree",
+  verbose = TRUE
+)
+
+xgb_tuned
+```
+```{r}
+
+model_xgb_predict <- predict(xgb_tuned,newdata =  Test)
+
+confusionMatrix(model_xgb_predict, Test$Churn)
+```
+
+Es mejor que el *Adaboost* pero peor que el *GLM*
+
+
+Por otro lado, hemos visto en el H2o que el modelo que mejor performaba era el *GBM*, ¿y si lo probamos?
+
+### GBM
+
+
+
 
 
