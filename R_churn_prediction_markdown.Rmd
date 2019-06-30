@@ -961,9 +961,9 @@ Esta sería nuestra mejor aproximación, donde vemos reducida la cantidad de fal
 Al tratarse de una muestra no balanceada, se tuvo que recurrir a técnicas de balanceo como el "SMOTE".
 
 Las variables que más peso tienen en la predicción analizada son:
-* Contrato (2 años y 1 año).
-* Servicio de internet (fibra).
-* Tenure 48-60 meses (mucho tiempo en compañía).
+  * Contrato (2 años y 1 año).
+  * Servicio de internet (fibra).
+  * Tenure 48-60 meses (mucho tiempo en compañía).
 
 
 Se recomienda a la empresa cerrar contratos largos, ofrecer fibra óptica en lugar de adsl y hacer una acción especial regalando fibra y generando contratos a largo plazo.
