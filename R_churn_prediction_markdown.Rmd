@@ -390,27 +390,48 @@ clean_dataset <- data.frame(lapply(clean_dataset, function(x) {
 `tenure` es una variable continua, pero con valores absolutos. Para evitar problemas de ordinalidad, la clasificaremos en rangos:
 
 ```{r}
-library("dplyr")
-clean_dataset <- mutate(clean_dataset, tenure_rank = tenure)
-clean_dataset$tenure_rank[clean_dataset$tenure_rank >=0 & dataset$tenure_rank <= 12] <- '0-1 year'
-clean_dataset$tenure_rank[clean_dataset$tenure_rank > 12 & dataset$tenure_rank <= 24] <- '1-2 years'
-clean_dataset$tenure_rank[clean_dataset$tenure_rank > 24 & dataset$tenure_rank <= 36] <- '2-3 years'
-clean_dataset$tenure_rank[clean_dataset$tenure_rank > 36 & dataset$tenure_rank <= 48] <- '3-4 years'
-clean_dataset$tenure_rank[clean_dataset$tenure_rank > 48 & dataset$tenure_rank <= 60] <- '4-5 years'
-clean_dataset$tenure_rank[clean_dataset$tenure_rank > 60 & dataset$tenure_rank <= 72] <- '5-6 years'
+group_tenure <- function(tenure){
+    if (tenure >= 0 & tenure <= 12){
+        return('0-12 Month')
+    }else if(tenure > 12 & tenure <= 24){
+        return('12-24 Month')
+    }else if (tenure > 24 & tenure <= 48){
+        return('24-48 Month')
+    }else if (tenure > 48 & tenure <=60){
+        return('48-60 Month')
+    }else if (tenure > 60){
+        return('> 60 Month')
+    }
+}
 
-clean_dataset$tenure_rank <- as.factor(clean_dataset$tenure_rank)
+
+clean_dataset$tenure <- as.numeric(clean_dataset$tenure)
+clean_dataset$tenure_group <- sapply(clean_dataset$tenure,group_tenure)
+clean_dataset$tenure_group <- as.factor(clean_dataset$tenure_group)
+
+clean_dataset$tenure <- NULL
 ```
+
+
 
 
 ```{r}
 df <- clean_dataset[,names(clean_dataset) != "customerID"]
 
-class_vars <- sapply(df, class)
-cat_vars <- df[,class_vars=="factor"]
 
+
+df$MonthlyCharges <- as.numeric(df$MonthlyCharges)
+df$TotalCharges <- as.numeric(df$TotalCharges)
+
+class_vars <- sapply(df, class)
+
+cat_vars <- df[,class_vars=="factor"]
+cat_vars$Churn <- NULL
+
+class_vars
 
 ```
+
 
 
 ```{r}
@@ -450,6 +471,10 @@ Test  <- df[-trainIndex,]
 
 ```
 
+```{r}
+head(Train)
+```
+
 
 
 ```{r}
@@ -461,18 +486,20 @@ fitControl <- trainControl(## 10-fold CV
                            repeats = 10)
 
 
-
-library("gbm")
-gbmFit1 <- train(Churn ~ ., data = Train, 
-                 method = "gbm", 
-                 trControl = fitControl,
-                 ## This last option is actually one
-                 ## for gbm() that passes through
-                 verbose = FALSE)
-gbmFit1
+## Logistic regression
+lreg<-train(Churn ~ ., data = Train,
+            method="glm",
+            family=binomial(),
+            trControl=fitControl)
+summary(lreg)
 
 ```
 
+Vamos a sacar variables que tienen el p-value muy alto o mucho rango de error:
+
+```{r}
+
+```
 
 
 
