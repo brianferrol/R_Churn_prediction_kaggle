@@ -338,7 +338,34 @@ ggplot(iv_ds$Tables$tenure, aes(x=tenure, y=WOE, fill = WOE))+
 ```
 
 
+
+
 ## Preprocessing:
+
+Hay variables categóricas que tienen el mismo valor, por lo tanto hay que modificarlas para notener misma información en dos variables si las pasamos a dummies:
+
+```{r}
+clean_dataset <- data.frame(lapply(clean_dataset, function(x) {
+                  gsub("No internet service", "No", x)}))
+clean_dataset <- data.frame(lapply(clean_dataset, function(x) {
+                  gsub("No phone service", "No", x)}))
+```
+
+`tenure` es una variable continua, pero con valores absolutos. Para evitar problemas de ordinalidad, la clasificaremos en rangos:
+
+```{r}
+library("dplyr")
+clean_dataset <- mutate(clean_dataset, tenure_rank = tenure)
+clean_dataset$tenure_rank[clean_dataset$tenure_rank >=0 & dataset$tenure_rank <= 12] <- '0-1 year'
+clean_dataset$tenure_rank[clean_dataset$tenure_rank > 12 & dataset$tenure_rank <= 24] <- '1-2 years'
+clean_dataset$tenure_rank[clean_dataset$tenure_rank > 24 & dataset$tenure_rank <= 36] <- '2-3 years'
+clean_dataset$tenure_rank[clean_dataset$tenure_rank > 36 & dataset$tenure_rank <= 48] <- '3-4 years'
+clean_dataset$tenure_rank[clean_dataset$tenure_rank > 48 & dataset$tenure_rank <= 60] <- '4-5 years'
+clean_dataset$tenure_rank[clean_dataset$tenure_rank > 60 & dataset$tenure_rank <= 72] <- '5-6 years'
+
+clean_dataset$tenure_rank <- as.factor(clean_dataset$tenure_rank)
+```
+
 
 ```{r}
 df <- clean_dataset[,names(clean_dataset) != "customerID"]
@@ -356,6 +383,8 @@ library("fastDummies")
 Dummies <- dummy_cols(df, select_columns = names(cat_vars), remove_first_dummy = TRUE)
 
 df <- Dummies[,!names(Dummies) %in% names(cat_vars)]
+
+df$Churn <- as.factor(df$Churn)
 ```
 
 
@@ -363,44 +392,46 @@ df <- Dummies[,!names(Dummies) %in% names(cat_vars)]
 
 Primero hacemos un split de las variables:
 
+
 ```{r}
+library("caret")
 
 seed <- 12345 
   
 set.seed(seed)
 
-trainIndex <- createDataPartition(df$Churn, p = .75, 
+trainIndex <- createDataPartition(df$Churn, p = .80, 
                                   list = FALSE, 
                                   times = 1)
 head(trainIndex)
 ```
+
+Separamos el dataframe en muestras de entrenamiento y de evaluación de resultados:
+
 ```{r}
 Train <- df[ trainIndex,]
 Test  <- df[-trainIndex,]
 
 ```
 
+
+
+Logistic Regression:
 ```{r}
-library("caret")
+
 fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
                            number = 10,
                            ## repeated ten times
                            repeats = 10)
 
-
-
-library("gbm")
-gbmFit1 <- train(Churn ~ ., data = Train, 
-                 method = "gbm", 
-                 trControl = fitControl,
-                 ## This last option is actually one
-                 ## for gbm() that passes through
-                 verbose = FALSE)
-gbmFit1
-
+## Logistic regression
+lreg<-train(Churn ~ ., data = Train,
+            method="glm",
+            family=binomial(),
+            trControl=fitControl)
+summary(lreg)
 ```
-
 
 
 
