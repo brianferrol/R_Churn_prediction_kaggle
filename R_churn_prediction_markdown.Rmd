@@ -209,33 +209,50 @@ plot_grid(ggplot(dataset, aes(x=gender,fill=Churn))+ geom_bar()
           ggplot(dataset, aes(x=Partner,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=Dependents,fill=Churn))+ geom_bar(position = 'fill')
-                      +scale_fill_manual(values = brian_palette),
-          ggplot(dataset, aes(x=PhoneService,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette)+theme_bw()
+          +scale_x_discrete(labels = function(x)str_wrap(x, width = 1)),
+          align = "v", ncol=2)
+```
+
+```{r}
+plot_grid(ggplot(dataset, aes(x=PhoneService,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=MultipleLines,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=InternetService,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=OnlineSecurity,fill=Churn))+ geom_bar(position = 'fill')
-                      +scale_fill_manual(values = brian_palette),
-          ggplot(dataset, aes(x=OnlineBackup,fill=Churn))+ geom_bar(position = 'fill')
+                                +scale_fill_manual(values = brian_palette)
+          +theme_bw()
+          +scale_x_discrete(labels = function(x)str_wrap(x, width = 1)),
+          align = "v", ncol=2)
+```
+```{r}
+plot_grid(ggplot(dataset, aes(x=OnlineBackup,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=DeviceProtection,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=StreamingMovies,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=StreamingTV,fill=Churn))+ geom_bar(position = 'fill')
-                      +scale_fill_manual(values = brian_palette),
-          ggplot(dataset, aes(x=Contract,fill=Churn))+ geom_bar(position = 'fill')
+                      +scale_fill_manual(values = brian_palette)
+          +theme_bw()
+          +scale_x_discrete(labels = function(x)str_wrap(x, width = 1)),
+          align = "v", ncol=2)
+
+```
+```{r}
+plot_grid(ggplot(dataset, aes(x=Contract,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=PaperlessBilling,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette),
           ggplot(dataset, aes(x=PaymentMethod,fill=Churn))+ geom_bar(position = 'fill')
                       +scale_fill_manual(values = brian_palette)
-          
-          +theme_bw()+scale_x_discrete(labels = function(x) str_wrap(x, width = 1)),
-          align = "v", ncol=3)
+          +theme_bw()
+          +scale_x_discrete(labels = function(x)str_wrap(x, width = 1)),
+          align = "v", ncol=2)
 ```
+
 
 Podemos ver, por ejemplo:
 * Las personas mayores son más propensas a abandonar la compañía.
