@@ -198,6 +198,8 @@ xlab("Churn") +
 ylab("Percent")+
 ggtitle("Churn Percent")
 ```
+Podría tratarse de una muestra no balanceada, lo cual es lógico en el ámbito de churn.
+
 
 ```{r}
 options(repr.plot.width = 16, repr.plot.height = 70)
@@ -494,6 +496,48 @@ Test  <- df[-trainIndex,]
 head(Train)
 ```
 
+
+
+Debug de conexión de Rstudio a las paralelizaciones de los modelos:
+```{r}
+# Installation of the doSNOW parallel library with all dependencies
+doInstall <- TRUE # Change to FALSE if you don't want packages installed.
+toInstall <- c("doSNOW") 
+if((doInstall) && (!is.element(toInstall, installed.packages()[,1])))
+{
+    cat("Please install required package. Select server:"); chooseCRANmirror();
+    install.packages(toInstall, dependencies = c("Depends", "Imports")) 
+}
+# load doSnow and (parallel for CPU info) library
+library(doSNOW)
+library(parallel)
+# For doSNOW one can increase up to 128 nodes
+# Each node requires 44 Mbyte RAM under WINDOWS.
+# detect cores with parallel() package
+nCores <- detectCores(logical = FALSE)
+cat(nCores, " cores detected.")
+# detect threads with parallel()
+nThreads<- detectCores(logical = TRUE)
+cat(nThreads, " threads detected.")
+# Create doSNOW compute cluster (try 64)
+# One can increase up to 128 nodes
+# Each node requires 44 Mbyte RAM under WINDOWS.
+cluster = makeCluster(nThreads, type = "SOCK")
+class(cluster);
+# register the cluster
+registerDoSNOW(cluster)
+#get info
+getDoParWorkers(); getDoParName();
+# insert parallel computation here
+        
+# stop cluster and remove clients
+stopCluster(cluster); print("Cluster stopped.")
+# insert serial backend, otherwise error in repetetive tasks
+registerDoSEQ()
+# clean up a bit.
+invisible(gc); remove(nCores); remove(nThreads); remove(cluster); 
+```
+
 ### Regresión logística
 
 ```{r}
@@ -545,7 +589,7 @@ Veamos la matriz de confusión para este modelo:
 ```{r}
 
 model_glm_predict <- predict(lreg2,Test2)
-confusionMatrix(model_glm_predict,Test2$Churn)
+confusionMatrix(model_glm_predict,Test2$Churn, positive = "1")
 
 ```
 
@@ -554,6 +598,7 @@ No resultó siendo un modelo muy bueno, ya que podemos ver que existe una gran c
 
 
 ### Adaboost
+
 
 ```{r}
 library(fastAdaboost)
@@ -572,7 +617,7 @@ Veamos los resultados:
 ```{r}
 model_ada_predict <- predict(ada,newdata =  Test)
 
-confusionMatrix(model_ada_predict$class, Test$Churn)
+confusionMatrix(model_ada_predict$class, Test$Churn, positive = "1")
 
 
 ```
@@ -616,6 +661,11 @@ xgb_base <- caret::train(
 xgb_base
 
 
+```
+
+```{r}
+xgb_base_pred <- predict(xgb_base, Test)
+confusionMatrix(xgb_base_pred, Test$Churn, positive = "1")
 ```
 
 Vamos a hacer un gridsearch para los hiperparámetros:
@@ -688,7 +738,7 @@ xgb_tuned
 
 model_xgb_predict <- predict(xgb_tuned,newdata =  Test)
 
-confusionMatrix(model_xgb_predict, Test$Churn)
+confusionMatrix(model_xgb_predict, Test$Chur, positive = "1")
 ```
 
 Es mejor que el *Adaboost* pero peor que el *GLM*
@@ -827,7 +877,7 @@ for (f in feature.names) {
 }
 
 mPred = predict(GBMada_best, Test3, na.action = na.pass)
-confusionMatrix(mPred, Test3$Churn)
+confusionMatrix(mPred, Test3$Churn, positive = "X1")
 
 ```
 
