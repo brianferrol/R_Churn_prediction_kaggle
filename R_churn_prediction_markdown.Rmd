@@ -45,7 +45,8 @@ packages <- c("tidyverse",
               "ROCR",
               "pROC",
               "h2o",
-              "dummies"
+              "dummies",
+              "fastAdaboost"
 )
 
 prepare_packages(packages)
@@ -475,7 +476,7 @@ Test  <- df[-trainIndex,]
 head(Train)
 ```
 
-
+### Regresión logística
 
 ```{r}
 
@@ -498,9 +499,49 @@ summary(lreg)
 Vamos a sacar variables que tienen el p-value muy alto o mucho rango de error:
 
 ```{r}
+# Creamos el nuevo Train y test:
+Train2 <-  Train
+Train2$MultipleLines_Yes <- NULL
+Train2$Dependents_Yes <- NULL
+
+Test2 <- Test
+Test2$MultipleLines_Yes <- NULL
+Test2$Dependents_Yes <- NULL
+
+
+#Probamos nuevo modelo:
+
+lreg2 <-train(Churn ~ ., data = Train2,
+            method="glm",
+            family=binomial(),
+            trControl=fitControl)
+
+lreg2
+summary(lreg2)
+
 
 ```
 
+Veamos la matriz de confusión para este modelo:
+```{r}
+
+model_glm_predict <- predict(lreg2,Test2)
+confusionMatrix(model_glm_predict,Test2$Churn)
+
+```
+
+No resultó siendo un modelo muy bueno, ya que podemos ver que existe una gran cantidad de falsos positivos y hay bastantes abandonadores que no los reconoce.
+
+
+
+### Adaboost
+
+```{r}
+library(fastAdaboost)
+
+
+
+```
 
 
 
