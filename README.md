@@ -6,4 +6,4 @@ Trabajo realizado con R para la predicción de abandono de una empresa de teleco
 Competencia de Kaggle:
 https://www.kaggle.com/blastchar/telco-customer-churn
 
-Rmd: https://github.com/brianferrol/R_Churn_prediction_kaggle/blob/master/project/R_churn_prediction_markdown.Rmd
+[Rmd](https://github.com/brianferrol/R_Churn_prediction_kaggle/blob/master/project/R_churn_prediction_markdown.Rmd)
